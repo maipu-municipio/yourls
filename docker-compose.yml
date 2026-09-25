@@ -1,0 +1,52 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      # Bind on the LAN/VPN interface only: cloudflared runs on another host,
+      # in the same network, and points its ingress at http://<this-host-ip>:${YOURLS_PORT}.
+      # Never bind 0.0.0.0 on a host that is also reachable from the public internet.
+      - "${YOURLS_BIND_ADDRESS:-0.0.0.0}:${YOURLS_PORT:-8082}:80"
+    depends_on:
+      db:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 384M
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1/admin/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${YOURLS_DB_NAME}
+      - MYSQL_USER=${YOURLS_DB_USER}
+      - MYSQL_PASSWORD=${YOURLS_DB_PASS}
+    volumes:
+      - db_data:/var/lib/mysql
+    # No se publica ningún puerto de MySQL al host: solo la red interna de docker-compose puede alcanzarlo.
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+
+volumes:
+  db_data:

@@ -1,0 +1,8 @@
+.git
+.github
+.env
+tests
+phpunit.xml.dist
+CHANGELOG.md
+README.md
+readme.html

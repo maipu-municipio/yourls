@@ -11,7 +11,33 @@
 
 **YOURLS** is a set of PHP scripts that will allow you to run <strong>Y</strong>our <strong>O</strong>wn <strong>URL</strong> <strong>S</strong>hortener, on **your** server. You'll have full control over your data, detailed stats, analytics, plugins, and more. It's free and open-source.
 
-## Getting Started
+## Despliegue con Docker (Maipú)
+
+Este fork incluye `Dockerfile` + `docker-compose.yml` para correr YOURLS (app + MySQL) en contenedores.
+
+```bash
+cp .env.example .env   # completar YOURLS_SITE, YOURLS_COOKIEKEY, credenciales, etc.
+docker compose up -d --build
+```
+
+- La app queda escuchando en `${YOURLS_BIND_ADDRESS}:${YOURLS_PORT}` (por defecto `0.0.0.0:8082`).
+- `user/config.php` se genera en cada arranque desde `docker/config.docker.php` + variables de entorno (no se commitea).
+- Al primer arranque, entrar a `http://<host>:${YOURLS_PORT}/admin/install.php` para crear las tablas.
+
+### Publicación con Cloudflare Tunnel en otro host
+
+`cloudflared` **no** corre en este host, sino en otro host de la misma red (LAN/VPN). Para publicarlo:
+
+1. En `.env`, setear `YOURLS_BIND_ADDRESS` a la IP de este host en esa red (evitar `0.0.0.0` si el host también tiene una interfaz pública).
+2. En el host donde corre `cloudflared`, agregar un ingress rule apuntando a `http://<ip-de-este-host>:${YOURLS_PORT}`, por ejemplo:
+   ```yaml
+   - hostname: maip.mu
+     service: http://10.0.0.X:8082
+   ```
+3. `YOURLS_SITE` debe ser el hostname público final (el que resuelve el túnel), no la IP interna.
+4. El puerto de MySQL no se expone al host; solo es alcanzable dentro de la red interna de docker-compose.
+
+
 
 Check out the complete documentation on [docs.yourls.org](https://docs.yourls.org).  
 It contains everything from beginners to experts.
